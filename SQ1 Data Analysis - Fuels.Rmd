@@ -1,0 +1,325 @@
+---
+title: "SQ1 Data Analysis - Fuels"
+author: "Mara St. Amant"
+date: "2024-02-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+
+```{r}
+#Read in data
+fuels <- read_csv("~/Downloads/0thesis/data/fuels_carbon_all_years.csv")
+head(fuels)
+```
+
+```{r}
+#Renaming timesteps for entire dataset
+times3 <- fuels$timestep
+years <- c()
+
+for (i in times3) {
+  
+  if (i == "post_1") {
+    years <- append(years, 2003)}
+  else if (i == "post_14"){
+    years <- append(years, 2016)}
+  else if (i == "post_18"){
+    years <- append(years, 2020)}
+  else if (i == "post_7"){
+    years <- append(years, 2009)}
+  else if (i == "pre_treatment"){
+    years <- append(years, 2001)}
+  else if (i == "post_mastication_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_burn_2b"){
+    years <- append(years, 2010)}
+  else if (i == "post_harvest_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_mechburn_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_harvest_1"){
+    years <- append(years, 2002)}
+  else if (i == "post_mastication_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_2"){
+    years <- append(years, 2010)}
+  else if (i == "post_burn_3"){
+    years <- append(years, 2018)}
+  else if (i == "post_mechburn_1"){
+    years <- append(years, 2002)}
+  
+}
+fuels$years = years
+```
+
+```{r}
+#Reducing to just treatment, plot, compartment, timestep, carbon, and year
+carbon3 <- data.frame(treatment=fuels$treatment, compartment=fuels$comp, plot=fuels$plot_id, timestep=fuels$timestep, 
+                      duff_carbon=fuels$duff_carbon_mgha, litter_carbon=fuels$litter_carbon_mgha, x1hr_carbon=fuels$x1h_carbon_mgha, 
+                      x10hr_carbon=fuels$x10h_carbon_mgha, x100hr_carbon=fuels$x100h_carbon_mgha, x1000hr_r_carbon=fuels$x1000r_carbon_mgha, 
+                      x1000hr_s_carbon=fuels$x1000s_carbon_mgha, total_carbon=fuels$total_carbon_mgha, year=fuels$years)
+head(carbon3)
+```
+
+```{r}
+########### CONTROL ############
+#Reduce fuels to control only, sum coarse woody fuels, fine woody fuels, and duff
+totalcarbon3 <- carbon3 %>%
+  mutate(coarse_woody_fuel_carbon=rowSums(carbon3[ , c("x1000hr_r_carbon", "x1000hr_s_carbon")]), fine_woody_fuel_carbon=rowSums(carbon3[ , 
+                c("litter_carbon", "x1hr_carbon", "x10hr_carbon", "x100hr_carbon")]))
+control3 <- filter(totalcarbon3, treatment == "control")
+head(control3)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+control3_comp40 <- filter(control3, compartment == 40)
+control3_comp240 <- filter(control3, compartment == 240)
+control3_comp590 <- filter(control3, compartment == 590)
+```
+
+```{r}
+#Group by year, average compartment carbon
+control3_carbon40 <- control3_comp40 %>% group_by(year) %>%
+  summarise(treatment="control", compartment= "40", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+control3_carbon40
+
+control3_carbon240 <- control3_comp240 %>% group_by(year) %>%
+  summarise(treatment="control", compartment= "40", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+control3_carbon240
+
+control3_carbon590 <- control3_comp590 %>% group_by(year) %>%
+  summarise(treatment="control", compartment= "40", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+control3_carbon590
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+control_fuels_carbon <- rbind(control3_carbon40, control3_carbon240, control3_carbon590)
+control_fuels_avg <- control_fuels_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="control", 
+            avg_coarse_woody_fuel_carbon=mean(avg_coarse_woody_fuel_carbon), avg_fine_woody_fuel_carbon=mean(avg_fine_woody_fuel_carbon),
+            avg_duff_carbon=mean(avg_duff_carbon), avg_total_carbon=mean(avg_total_carbon))
+control_fuels_avg
+```
+
+
+```{r}
+control_fuels <- data.frame(Pool=rep(c("Coarse Woody Fuels", "Fine Woody Fuels", "Duff", "Total"), each=5),
+                        year=rep(c("2001", "2003", "2009", "2016", "2020"),4),
+                        avgs=c(11.66225, 13.78396, 11.17486, 13.70769, 10.85006,
+                               13.11487, 12.96483, 10.544335, 14.69165, 24.83938,
+                               18.84346, 16.79968, 23.542005, 28.63694, 22.97148,
+                               43.62059, 43.55441, 45.2612, 57.03628, 58.66092))
+control_fuels
+
+
+control_fuels_plot <- ggplot(data = control_fuels, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Coarse Woody Fuels" = "chartreuse4", "Fine Woody Fuels" = "goldenrod1", "Duff" = "deeppink3", "Total" = "blue")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Fuel Carbon Stocks - Control Treatment")
+control_fuels_plot
+```
+
+```{r}
+########### MECH ONLY ############
+#Reduce fuels to mech only, sum coarse woody fuels, fine woody fuels, and duff
+mech3 <- filter(totalcarbon3, treatment == "mech")
+head(mech3)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+mech3_comp190 <- filter(mech3, compartment == 190)
+mech3_comp490 <- filter(mech3, compartment == 490)
+mech3_comp350 <- filter(mech3, compartment == 350)
+```
+
+```{r}
+#Group by year, average compartment carbon
+mech3_carbon190 <- mech3_comp190 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment= "190", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mech3_carbon190
+
+mech3_carbon490 <- mech3_comp490 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment= "490", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mech3_carbon490
+
+mech3_carbon350 <- mech3_comp350 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment= "350", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mech3_carbon350
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+mech_fuels_carbon <- rbind(mech3_carbon190, mech3_carbon490, mech3_carbon350)
+mech_fuels_avg <- mech_fuels_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="mech", 
+            avg_coarse_woody_fuel_carbon=mean(avg_coarse_woody_fuel_carbon), avg_fine_woody_fuel_carbon=mean(avg_fine_woody_fuel_carbon),
+            avg_duff_carbon=mean(avg_duff_carbon), avg_total_carbon=mean(avg_total_carbon))
+mech_fuels_avg
+```
+
+
+```{r}
+mech_fuels <- data.frame(Pool=rep(c("Coarse Woody Fuels", "Fine Woody Fuels", "Duff", "Total"), each=7),
+                        year=rep(c("2001", "2002", "2003", "2009", "2016", "2019", "2020"),4),
+                        avgs=c(14.355442, 17.914374, 12.266074, 10.271139, 10.176017, 9.674589, 8.021427,
+                               11.7345615, 11.83673, 13.9779415, 11.84575, 12.60152, 14.11685, 22.43704,
+                               19.76263, 10.25636, 12.69874, 17.05367, 16.48204, 16.11278, 18.76252, 
+                               45.8526335, 40.00746, 38.9427555, 39.17057, 39.25957, 39.90421, 49.22099))
+mech_fuels
+
+
+mech_fuels_plot <- ggplot(data = mech_fuels, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Coarse Woody Fuels" = "chartreuse4", "Fine Woody Fuels" = "goldenrod1", "Duff" = "deeppink3", "Total" ="blue")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Fuel Carbon Stocks - Mechanical Only Treatment")
+mech_fuels_plot
+```
+
+```{r}
+########### BURN ONLY ############
+#Reduce fuels to burn only, sum coarse woody fuels, fine woody fuels, and duff
+burn3 <- filter(totalcarbon3, treatment == "burn")
+head(burn3)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+burn3_comp60 <- filter(burn3, compartment == 60)
+burn3_comp340 <- filter(burn3, compartment == 340)
+burn3_comp400 <- filter(burn3, compartment == 400)
+```
+
+```{r}
+#Group by year, average compartment carbon
+burn3_carbon60 <- burn3_comp60 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment= "60", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+burn3_carbon60
+
+burn3_carbon340 <- burn3_comp340 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment= "340", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+burn3_carbon340
+
+burn3_carbon400 <- burn3_comp400 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment= "400", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+burn3_carbon400
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+burn_fuels_carbon <- rbind(burn3_carbon60, burn3_carbon340, burn3_carbon400)
+burn_fuels_avg <- burn_fuels_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="burn", 
+            avg_coarse_woody_fuel_carbon=mean(avg_coarse_woody_fuel_carbon), avg_fine_woody_fuel_carbon=mean(avg_fine_woody_fuel_carbon),
+            avg_duff_carbon=mean(avg_duff_carbon), avg_total_carbon=mean(avg_total_carbon))
+burn_fuels_avg
+```
+
+```{r}
+burn_fuels <- data.frame(Pool=rep(c("Coarse Woody Fuels", "Fine Woody Fuels", "Duff", "Total"), each=7),
+                        year=rep(c("2001", "2003", "2009", "2010", "2016", "2018", "2020"),4),
+                        avgs=c(14.836352, 2.684778, 6.365968, 4.118804, 12.359400, 6.658412, 9.813659, 
+                               13.089459, 3.851612, 7.932194, 5.4454065, 10.353139, 7.008300, 12.2201925,
+                               18.397513, 2.613721, 3.570361, 4.7262815, 6.499345, 4.418839, 4.158836,
+                               46.323324, 9.150111, 17.868523, 14.290492, 29.211884, 18.085551, 26.1926875))
+burn_fuels
+
+
+burn_fuels_plot <- ggplot(data = burn_fuels, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Coarse Woody Fuels" = "chartreuse4", "Fine Woody Fuels" = "goldenrod1", "Duff" = "deeppink3", "Total" = "blue")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Fuel Carbon Stocks - Burn Only Treatment")
+burn_fuels_plot
+```
+
+```{r}
+########### MECH BURN ONLY ############
+#Reduce fuels to mech only, sum coarse woody fuels, fine woody fuels, and duff
+mechburn3 <- filter(totalcarbon3, treatment == "mechburn")
+head(mechburn3)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+mechburn3_comp180 <- filter(mechburn3, compartment == 180)
+mechburn3_comp380 <- filter(mechburn3, compartment == 380)
+mechburn3_comp570 <- filter(mechburn3, compartment == 570)
+```
+
+```{r}
+#Group by year, average compartment carbon
+mechburn3_carbon180 <- mechburn3_comp180 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment= "180", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mechburn3_carbon180
+
+mechburn3_carbon380 <- mechburn3_comp380 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment= "380", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mechburn3_carbon380
+
+mechburn3_carbon570 <- mechburn3_comp570 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment= "570", avg_coarse_woody_fuel_carbon=mean(coarse_woody_fuel_carbon), 
+            avg_fine_woody_fuel_carbon=mean(fine_woody_fuel_carbon), avg_duff_carbon=mean(duff_carbon), avg_total_carbon=mean(total_carbon))
+mechburn3_carbon570
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+mechburn_fuels_carbon <- rbind(mechburn3_carbon180, mechburn3_carbon380, mechburn3_carbon570)
+mechburn_fuels_avg <- mechburn_fuels_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="mechburn", 
+            avg_coarse_woody_fuel_carbon=mean(avg_coarse_woody_fuel_carbon), avg_fine_woody_fuel_carbon=mean(avg_fine_woody_fuel_carbon),
+            avg_duff_carbon=mean(avg_duff_carbon), avg_total_carbon=mean(avg_total_carbon))
+mechburn_fuels_avg
+```
+
+```{r}
+mechburn_fuels <- data.frame(Pool=rep(c("Coarse Woody Fuels", "Fine Woody Fuels", "Duff", "Total"), each=7),
+                        year=rep(c("2001", "2002", "2003", "2009", "2016", "2019", "2020"),4),
+                        avgs=c(13.238882, 6.872456, 9.399892, 5.928968, 8.895955, 7.583382, 5.079273,
+                               13.776948, 5.541887, 8.501400, 7.585832, 10.362884, 9.396945, 8.933445,
+                               22.800103, 5.866887, 6.486462, 3.617567, 13.296613, 4.134687, 5.012188,
+                               49.81593, 18.28123, 24.38775, 17.13237, 32.55545, 21.11501, 19.02491))
+mechburn_fuels
+
+
+mechburn_fuels_plot <- ggplot(data = mechburn_fuels, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Coarse Woody Fuels" = "chartreuse4", "Fine Woody Fuels" = "goldenrod1", "Duff" = "deeppink3", "Total" = "blue")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Fuel Carbon Stocks - Mechanical + Burn Treatment")
+mechburn_fuels_plot
+```

@@ -1,0 +1,499 @@
+---
+title: "SQ1 Data Analysis - Understory"
+author: "Mara St. Amant"
+date: "2023-10-18"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+
+```{r}
+#Read in data
+understory <- read_csv("~/Downloads/0thesis/data/understory_carbon_all_years.csv")
+head(understory)
+```
+```{r}
+#Column names
+colnames(understory)
+```
+
+```{r}
+#Timesteps
+unique(understory["timestep"])
+```
+```{r}
+#Renaming timesteps for entire dataset
+times2 <- understory$timestep
+years <- c()
+
+for (i in times2) {
+  
+  if (i == "post_1") {
+    years <- append(years, 2003)}
+  else if (i == "post_14"){
+    years <- append(years, 2016)}
+  else if (i == "post_18"){
+    years <- append(years, 2020)}
+  else if (i == "post_7"){
+    years <- append(years, 2009)}
+  else if (i == "pre_treatment"){
+    years <- append(years, 2001)}
+  else if (i == "post_mastication_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_burn_2b"){
+    years <- append(years, 2010)}
+  else if (i == "post_harvest_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_mechburn_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_harvest_1"){
+    years <- append(years, 2002)}
+  else if (i == "post_mastication_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_2"){
+    years <- append(years, 2010)}
+  else if (i == "post_burn_3"){
+    years <- append(years, 2018)}
+  else if (i == "post_mechburn_1"){
+    years <- append(years, 2002)}
+  
+}
+understory$years = years
+```
+
+```{r}
+#Reducing to just treatment, plot, compartment, timestep, carbon, and year
+carbon2 <- data.frame(treatment=understory$treatment, compartment=understory$comp, plot=understory$plot_id, timestep=understory$timestep, shrub_carbon=understory$shrub_carbon_mgha, forb_carbon=understory$forb_carbon_mgha, grass_carbon=understory$grass_carbon_mgha, year=understory$years)
+head(carbon2)
+```
+
+```{r}
+########### CONTROL ############
+#Reduce understory to control only, sum total understory carbon
+totalcarbon2 <- carbon2 %>%
+  mutate(total_carbon=rowSums(carbon2[ , c("shrub_carbon", "forb_carbon", "grass_carbon")]))
+control2 <- filter(totalcarbon2, treatment == "control")
+head(control2)
+```
+
+```{r}
+#Reduce to years
+control2001 <- filter(control2, timestep == "pre_treatment")
+control2003a <- filter(control2, timestep == "post_1")
+control2009 <- filter(control2, timestep == "post_7")
+control2016 <- filter(control2, timestep == "post_14")
+control2020 <- filter(control2, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+control_sum2001 <- control2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+control_sum2003 <- control2003a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+control_sum2009 <- control2009 %>% group_by(plot, year, compartment, treatment) %>%
+ summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+control_sum2016 <- control2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+control_sum2020 <- control2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+
+control_sum <- rbind(control_sum2001, control_sum2003, control_sum2009, control_sum2016, control_sum2020)
+head(control_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp40 <- filter(control_sum, compartment == 40)
+comp240 <- filter(control_sum, compartment == 240)
+comp590 <- filter(control_sum, compartment == 590)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon40 <- comp40 %>% group_by(year) %>%
+  summarise(treatment="control", compartment= "40", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp40)))
+carbon40
+
+carbon240 <- comp240 %>% group_by(year) %>%
+  summarise(treatment="control", compartment="240", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp240)))
+carbon240
+
+carbon590 <- comp590 %>% group_by(year) %>%
+  summarise(treatment="control", compartment="590", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp590)))
+carbon590
+```
+```{r}
+#For all compartments, group by year, average carbon
+control_understory_carbon <- rbind(carbon40, carbon240, carbon590)
+control_understory_avg <- control_understory_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="control", 
+            avg_shrub_carbon=mean(avg_shrub_carbon), avg_forb_carbon=mean(avg_forb_carbon),
+            avg_grass_carbon=mean(avg_grass_carbon), avg_total_carbon=mean(avg_total_carbon))
+control_understory_avg
+```
+
+
+```{r}
+control_understory <- data.frame(Pool=rep(c("Shrub", "Forb", "Grass"), each=5),
+                        year=rep(c("2001", "2003", "2009", "2016", "2020"),3),
+                        avgs=c(0.7663507, 0.5106374, 0.4998874, 0.5142949, 0.4341136,
+                               0.0016437364, 0.0016423203, 0.0004439325, 0.0003116013, 0.0000377451,
+                               0.00001036492, 0.00002109477, 0, 0.000006808279, 0))
+control_understory
+
+
+control_understory_plot <- ggplot(data = control_understory, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Shrub" = "chartreuse4", "Forb" = "goldenrod1", "Grass" = "deeppink3")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Understory Carbon Stocks - Control Treatment")
+control_understory_plot
+```
+
+```{r}
+########### MECH ONLY ############
+#Reduce understory to  mech only, sum total understory carbon
+totalcarbon2 <- carbon2 %>%
+  mutate(total_carbon=rowSums(carbon2[ , c("shrub_carbon", "forb_carbon", "grass_carbon")]))
+mech2 <- filter(totalcarbon2, treatment == "mech")
+head(mech2)
+```
+
+```{r}
+#Reduce to years
+mech2001 <- filter(mech2, timestep == "pre_treatment")
+mech2002 <- filter(mech2, timestep == "post_harvest_1")
+mech2003a <- filter(mech2, timestep == "post_1")
+mech2003b <- filter(mech2, timestep == "post_mastication_1")
+mech2009 <- filter(mech2, timestep == "post_7")
+mech2016 <- filter(mech2, timestep == "post_14")
+mech2019 <- filter(mech2, timestep == "post_mastication_2")
+mech2020 <- filter(mech2, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+mech_sum2001 <- mech2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2002 <- mech2002 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2003a <- mech2003a %>% group_by(plot, year, compartment, treatment) %>%
+ summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2003b <- mech2003b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2009 <- mech2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2016 <- mech2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2019 <- mech2019 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mech_sum2020 <- mech2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+
+mech_sum <- rbind(mech_sum2001, mech_sum2002, mech_sum2003a, mech_sum2003b, mech_sum2009, mech_sum2016, mech_sum2019, mech_sum2020)
+head(mech_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp190 <- filter(mech_sum, compartment == 190)
+comp490 <- filter(mech_sum, compartment == 490)
+comp350 <- filter(mech_sum, compartment == 350)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon190 <- comp190 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment= "190", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp190)))
+carbon190
+
+carbon490 <- comp490 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment="490", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp490)))
+carbon490
+
+carbon350 <- comp350 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment="350", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp350)))
+carbon350
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+mech_understory_carbon <- rbind(carbon190, carbon490, carbon350)
+mech_understory_avg <- mech_understory_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="mech", 
+            avg_shrub_carbon=mean(avg_shrub_carbon), avg_forb_carbon=mean(avg_forb_carbon),
+            avg_grass_carbon=mean(avg_grass_carbon), avg_total_carbon=mean(avg_total_carbon))
+mech_understory_avg
+```
+
+```{r}
+mech_understory <- data.frame(Pool=rep(c("Shrub", "Forb", "Grass"), each=7),
+                        year=rep(c("2001", "2002", "2003", "2009", "2016", "2019", "2020"),3),
+                        avgs=c(1.1198257, 0, 0.1836976, 0.6178526, 0.9004373, 0.1248871, 0.2075499,
+                               0.0033472409, 0, 0.0011701681, 0.0013166077, 0.0027203501, 0.0005312500, 0.0002952381,
+                               0.0003466387, 0, 0.0001723739, 0, 0.0006494258, 9.027778e-05	, 0))
+mech_understory
+
+
+mech_understory_plot <- ggplot(data = mech_understory, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Shrub" = "chartreuse4", "Forb" = "goldenrod1", "Grass" = "deeppink3")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Understory Carbon Stocks - Mechanical Only Treatment")
+mech_understory_plot
+```
+
+```{r}
+########### BURN ONLY ############
+#Reduce understory to  burn only, sum total understory carbon
+totalcarbon2 <- carbon2 %>%
+  mutate(total_carbon=rowSums(carbon2[ , c("shrub_carbon", "forb_carbon", "grass_carbon")]))
+burn2 <- filter(totalcarbon2, treatment == "burn")
+head(burn2)
+```
+
+```{r}
+#Reduce to years
+burn2001 <- filter(burn2, timestep == "pre_treatment")
+burn2003a <- filter(burn2, timestep == "post_1")
+burn2003b <- filter(burn2, timestep == "post_burn_1")
+burn2009 <- filter(burn2, timestep == "post_7")
+burn2010a <- filter(burn2, timestep == "post_burn_2")
+burn2010b <- filter(burn2, timestep == "post_burn_2b")
+burn2016 <- filter(burn2, timestep == "post_14")
+burn2018 <- filter(burn2, timestep == "post_burn_3")
+burn2020 <- filter(burn2, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+burn_sum2001 <- burn2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2003a <- burn2003a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2003b <- burn2003b %>% group_by(plot, year, compartment, treatment) %>%
+ summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2009 <- burn2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2010a <- burn2010a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2010b <- burn2010b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2016 <- burn2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2018 <- burn2018 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+burn_sum2020 <- burn2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+
+burn_sum <- rbind(burn_sum2001, burn_sum2003a, burn_sum2003b, burn_sum2009, burn_sum2010a, burn_sum2010b, burn_sum2016, burn_sum2018, burn_sum2020)
+head(burn_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp60 <- filter(burn_sum, compartment == 60)
+comp340 <- filter(burn_sum, compartment == 340)
+comp400 <- filter(burn_sum, compartment == 400)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon60 <- comp60 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment= "60", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp60)))
+carbon60
+
+carbon340 <- comp340 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment="340", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp340)))
+carbon340
+
+carbon400 <- comp400 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment="400", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp400)))
+carbon400
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+burn_understory_carbon <- rbind(carbon60, carbon340, carbon400)
+burn_understory_avg <- burn_understory_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="burn", 
+            avg_shrub_carbon=mean(avg_shrub_carbon), avg_forb_carbon=mean(avg_forb_carbon),
+            avg_grass_carbon=mean(avg_grass_carbon), avg_total_carbon=mean(avg_total_carbon))
+burn_understory_avg
+```
+
+```{r}
+burn_understory <- data.frame(Pool=rep(c("Shrub", "Forb", "Grass"), each=7),
+                        year=rep(c("2001", "2003", "2009", "2010", "2016", "2018", "2020"),3),
+                        avgs=c(0.59819493, 0.09438773, 1.07702689, 0.29623630, 1.15449244, 0, 0.55707197,
+                               0.0014841228, 0.0009722728, 0.0006061404, 0.0014393468, 0.0001837719, 0, 0.0002350000,
+                               2.276316e-04, 1.610493e-04, 0, 0, 2.504386e-04, 0, 4.210526e-05))
+burn_understory
+
+
+burn_understory_plot <- ggplot(data = burn_understory, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Shrub" = "chartreuse4", "Forb" = "goldenrod1", "Grass" = "deeppink3")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Understory Carbon Stocks - Burn Only Treatment")
+burn_understory_plot
+```
+
+```{r}
+########### MECH BURN ############
+#Reduce understory to  mechburn only, sum total understory carbon
+totalcarbon2 <- carbon2 %>%
+  mutate(total_carbon=rowSums(carbon2[ , c("shrub_carbon", "forb_carbon", "grass_carbon")]))
+mechburn2 <- filter(totalcarbon2, treatment == "mechburn")
+head(mechburn2)
+```
+
+```{r}
+#Reduce to years
+mechburn2001 <- filter(mechburn2, timestep == "pre_treatment")
+mechburn2002a <- filter(mechburn2, timestep == "post_mechburn_1")
+mechburn2002b <- filter(mechburn2, timestep == "post_harvest_1")
+mechburn2003a <- filter(mechburn2, timestep == "post_1")
+mechburn2003b <- filter(mechburn2, timestep == "post_mastication_1")
+mechburn2009 <- filter(mechburn2, timestep == "post_7")
+mechburn2016 <- filter(mechburn2, timestep == "post_14")
+mechburn2019a <- filter(mechburn2, timestep == "post_harvest_2")
+mechburn2019b <- filter(mechburn2, timestep == "post_mastication_2")
+mechburn2019c <- filter(mechburn2, timestep == "post_mechburn_2")
+mechburn2020 <- filter(mechburn2, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+mechburn_sum2001 <- mechburn2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2002a <- mechburn2002a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2002b <- mechburn2002b %>% group_by(plot, year, compartment, treatment) %>%
+ summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2003a <- mechburn2003a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2003b <- mechburn2003b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2009 <- mechburn2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2016 <- mechburn2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2019a <- mechburn2019a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2019b <- mechburn2019b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2019c <- mechburn2019c %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+mechburn_sum2020 <- mechburn2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_shrub_carbon=sum(shrub_carbon), sum_forb_carbon=sum(forb_carbon), sum_grass_carbon=sum(grass_carbon), sum_plot_carbon=sum(total_carbon))
+
+mechburn_sum <- rbind(mechburn_sum2001, mechburn_sum2002a,mechburn_sum2002b, mechburn_sum2003a, mechburn_sum2003b, mechburn_sum2009, mechburn_sum2016, mechburn_sum2019a, mechburn_sum2019b, mechburn_sum2019c, mechburn_sum2020)
+head(mechburn_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp180 <- filter(mechburn_sum, compartment == 180)
+comp380 <- filter(mechburn_sum, compartment == 380)
+comp570 <- filter(mechburn_sum, compartment == 570)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon180 <- comp180 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment= "180", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp180)))
+carbon180
+
+carbon380 <- comp380 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment="380", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp380)))
+carbon380
+
+carbon570 <- comp570 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment="570", avg_shrub_carbon=mean(sum_shrub_carbon),
+            avg_forb_carbon=mean(sum_forb_carbon), avg_grass_carbon=mean(sum_grass_carbon),
+            avg_total_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp570)))
+carbon570
+```
+
+```{r}
+#For all compartments, group by year, average carbon
+mechburn_understory_carbon <- rbind(carbon180, carbon380, carbon570)
+mechburn_understory_avg <- mechburn_understory_carbon %>% group_by(year) %>% 
+  summarise(year=year, compartment=compartment, treatment="mechburn", 
+            avg_shrub_carbon=mean(avg_shrub_carbon), avg_forb_carbon=mean(avg_forb_carbon),
+            avg_grass_carbon=mean(avg_grass_carbon), avg_total_carbon=mean(avg_total_carbon))
+mechburn_understory_avg
+```
+
+```{r}
+mechburn_understory <- data.frame(Pool=rep(c("Shrub", "Forb", "Grass"), each=7),
+                        year=rep(c("2001", "2002", "2039", "2009", "2016", "2019", "2020"),3),
+                        avgs=c(0.63666097, 0, 0.07917402, 2.20024219, 2.67543537, 0.34297104, 0.66784039,
+                               2.157917e-03, 0, 8.107639e-04, 6.543129e-04, 5.396296e-04, 6.356356e-05, 1.187500e-04,
+                               3.129630e-04, 0, 1.450231e-04, 0, 4.947222e-04, 9.009009e-06, 1.041667e-05))
+mechburn_understory
+
+
+mechburn_understory_plot <- ggplot(data = mechburn_understory, aes(x = year, y = avgs, group = Pool)) + 
+    geom_line(size=1, aes(color=Pool)) + 
+    scale_colour_manual(values=c("Shrub" = "chartreuse4", "Forb" = "goldenrod1", "Grass" = "deeppink3")) +
+    geom_point() +
+    theme_classic() +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Understory Carbon Stocks - Mechanical + Burn Treatment")
+ mechburn_understory_plot
+```
+

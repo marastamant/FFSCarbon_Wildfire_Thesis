@@ -1,0 +1,170 @@
+---
+title: "FVS prep"
+author: "Mara St. Amant"
+output: html_document
+date: "2024-02-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+
+```{r}
+#Read in fuels data
+fuels <- read_csv("~/Downloads/0thesis/data/fuels_carbon_all_years.csv")
+head(fuels)
+```
+
+```{r pressure, echo=FALSE}
+unique(fuels["comp"])
+```
+```{r}
+#Renaming timesteps for entire dataset
+times3 <- fuels$timestep
+years <- c()
+
+for (i in times3) {
+  
+  if (i == "post_1") {
+    years <- append(years, 2003)}
+  else if (i == "post_14"){
+    years <- append(years, 2016)}
+  else if (i == "post_18"){
+    years <- append(years, 2020)}
+  else if (i == "post_7"){
+    years <- append(years, 2009)}
+  else if (i == "pre_treatment"){
+    years <- append(years, 2001)}
+  else if (i == "post_mastication_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_burn_2b"){
+    years <- append(years, 2010)}
+  else if (i == "post_harvest_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_mechburn_2"){
+    years <- append(years, 2019)}
+  else if (i == "post_harvest_1"){
+    years <- append(years, 2002)}
+  else if (i == "post_mastication_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_1"){
+    years <- append(years, 2003)}
+  else if (i == "post_burn_2"){
+    years <- append(years, 2010)}
+  else if (i == "post_burn_3"){
+    years <- append(years, 2018)}
+  else if (i == "post_mechburn_1"){
+    years <- append(years, 2002)}
+  
+}
+fuels$years = years
+```
+
+```{r}
+#Reducing to just compartment, plot, year, and fuels
+fuels2 <- data.frame(compartment=fuels$comp, plot=fuels$plot_id, year=fuels$years, duff_mgha=fuels$duff_mgha, litter_mgha=fuels$litter_mgha, x1h_mgha=fuels$x1h_mgha, x10h_mgha=fuels$x10h_mgha, x100h_mgha=fuels$x100h_mgha, x1000h_mgha=fuels$x1000s_mgha, x1000s_mgha=fuels$x1000r_mgha)
+head(fuels2)
+```
+
+```{r}
+#Convert Mg/ha to tons/acre
+fuels3 <- fuels2 %>%
+  mutate(duff=duff_mgha*0.44609, litter=litter_mgha*0.44609, x1h=x1h_mgha*0.44609, x10h=x10h_mgha*0.44609, 
+         x100h=x100h_mgha*0.44609, x1000h=x1000h_mgha*0.44609, x1000s=x1000s_mgha*0.44609)
+fuels4 <- data.frame(compartment=fuels3$compartment, plot=fuels3$plot, year=fuels3$year, duff=fuels3$duff, litter=fuels3$litter, x1h=fuels3$x1h, x10h=fuels3$x10h, x100h=fuels3$x100h, x1000h=fuels3$x1000h, x1000s=fuels3$x1000s)
+head(fuels4)
+```
+```{r}
+#Make 12 dataframes for compartments
+fuels40 <- filter(fuels4, compartment == 40)		
+fuels60 <- filter(fuels4, compartment == 60)		
+fuels180 <- filter(fuels4, compartment == 180)			
+fuels190 <- filter(fuels4, compartment == 190)			
+fuels240 <- filter(fuels4, compartment == 240)			
+fuels340 <- filter(fuels4, compartment == 340)			
+fuels350 <- filter(fuels4, compartment == 350)			
+fuels380 <- filter(fuels4, compartment == 380)			
+fuels400	<- filter(fuels4, compartment == 400)			
+fuels490 <- filter(fuels4, compartment == 490)
+fuels570 <- filter(fuels4, compartment == 570)
+fuels590 <- filter(fuels4, compartment == 590)
+```
+
+```{r}
+#Group by year, average compartment fuels
+avg_fuels40 <- fuels40 %>% group_by(year) %>%
+  summarise(compartment= "40", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels40
+
+avg_fuels60 <- fuels60 %>% group_by(year) %>%
+  summarise(compartment= "60", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels60
+
+avg_fuels180 <- fuels180 %>% group_by(year) %>%
+  summarise(compartment= "180", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels180
+
+avg_fuels190 <- fuels190 %>% group_by(year) %>%
+  summarise(compartment= "190", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels190
+
+avg_fuels240 <- fuels240 %>% group_by(year) %>%
+  summarise(compartment= "240", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels240
+
+avg_fuels340 <- fuels340 %>% group_by(year) %>%
+  summarise(compartment= "340", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels340
+
+avg_fuels350 <- fuels350 %>% group_by(year) %>%
+  summarise(compartment= "350", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels350
+
+avg_fuels380 <- fuels380 %>% group_by(year) %>%
+  summarise(compartment= "380", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels380
+
+avg_fuels400 <- fuels400 %>% group_by(year) %>%
+  summarise(compartment= "400", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels400
+
+avg_fuels490 <- fuels490 %>% group_by(year) %>%
+  summarise(compartment= "490", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels490
+
+avg_fuels570 <- fuels570 %>% group_by(year) %>%
+  summarise(compartment= "570", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels570
+
+avg_fuels590 <- fuels590 %>% group_by(year) %>%
+  summarise(compartment= "590", avg_x1h=mean(x1h), avg_x10h=mean(x10h), avg_x100h=mean(x100h), 
+            avg_x1000h=mean(x1000h), avg_x1000s=mean(x1000s), avg_litter=mean(litter), avg_duff=mean(duff))
+avg_fuels590
+```
+
+```{r}
+plots2001 <- filter(carbon, year == "2001")
+plots <- data.frame(year=plots2001$year, compartment=plots2001$compartment, plot=plots2001$plot)
+plots1 <- unique(plots["plot"])
+plots1
+```
+```{r}
+write.csv(plots1, "~/Downloads/0thesis/data/plots.csv", row.names=FALSE)
+```
+

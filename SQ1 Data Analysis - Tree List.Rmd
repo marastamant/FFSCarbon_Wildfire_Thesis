@@ -1,0 +1,533 @@
+---
+title: "SQ1 Data Analysis - Tree List"
+author: "Mara St. Amant"
+date: "2023-10-18"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(readr)
+```
+
+```{r}
+#Read in data
+treelist <- read_csv("~/Downloads/0thesis/data/treelist_compiled_biomass.csv")
+head(treelist)
+```
+
+```{r}
+#Column names
+colnames(treelist)
+```
+
+```{r}
+#Timesteps
+unique(treelist["timestep"])
+```
+
+```{r}
+#Renaming timesteps for entire dataset
+times <- treelist$timestep
+years <- c()
+
+for (i in times) {
+  
+  if (i == "post_18") {
+    years <- append(years, 2020)}
+  else if (i == "pre_treatment"){
+    years <- append(years, 2001)}
+   else if (i == "post_7"){
+    years <- append(years, 2009)}
+   else if (i == "post_1"){
+    years <- append(years, 2003)}
+   else if (i == "post_mastication_2"){
+    years <- append(years, 2019)}
+   else if (i == "post_14"){
+    years <- append(years, 2016)}
+   else if (i == "post_3rd_burn"){
+    years <- append(years, 2018)}
+   else if (i == "post_2nd_burn"){
+    years <- append(years, 2010)}
+   else if (i == "post_2nd_mechburn"){
+    years <- append(years, 2019)}
+   else if (i == "post_harvest_2"){
+    years <- append(years, 2019)}
+  
+  
+}
+treelist$years = years
+```
+
+```{r}
+#Reducing to just treatment, plot, compartment, timestep, carbon, and year
+carbon <- data.frame(treatment=treelist$treatment, compartment=treelist$comp, plot=treelist$plot_id, timestep=treelist$timestep, carbon=treelist$carbon_mgha, year=treelist$years)
+head(carbon)
+```
+
+
+```{r}
+########### CONTROL ############
+#Reduce treelist to control only
+control <- filter(carbon, treatment == "control")
+head(control)
+```
+
+
+```{r}
+#Reduce to years
+control2001 <- filter(control, timestep == "pre_treatment")
+control2003 <- filter(control, timestep == "post_1")
+control2009 <- filter(control, timestep == "post_7")
+control2010 <- filter(control, timestep == "post_2nd_burn")
+control2016 <- filter(control, timestep == "post_14")
+control2018 <- filter(control, timestep == "post_3rd_burn")
+control2019a <- filter(control, timestep == "post_harvest_2")
+control2019b <- filter(control, timestep == "post_mastication_2")
+control2020 <- filter(control, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+control_sum2001 <- control2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+control_sum2003 <- control2003 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+control_sum2009 <- control2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+control_sum2016 <- control2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+control_sum2020 <- control2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+
+control_sum <- rbind(control_sum2001, control_sum2003, control_sum2009, control_sum2016, control_sum2020)
+head(control_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp40 <- filter(control_sum, compartment == 40)
+comp240 <- filter(control_sum, compartment == 240)
+comp590 <- filter(control_sum, compartment == 590)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon40 <- comp40 %>% group_by(year) %>%
+  summarise(treatment="control", compartment="40", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp40)))
+carbon40
+
+carbon240 <- comp240 %>% group_by(year) %>%
+  summarise(treatment="control", compartment="240", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp240)))
+carbon240
+
+carbon590 <- comp590 %>% group_by(year) %>%
+  summarise(treatment="control", compartment="590", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp590)))
+carbon590
+```
+
+```{r}
+control_comp_carbon <- data.frame(Compartment=rep(c("Compartment 40", "Compartment 240", "Compartment 590"), each=5),
+                        year=rep(c("2001", "2003", "2009", "2016", "2020"),3),
+                        avgs=c(202.4672, 205.8954, 222.0829, 264.6700, 271.7742, 
+                               138.7960, 144.4435, 173.0651, 201.2252, 209.2351, 
+                               144.4789, 151.6906, 164.6505, 216.1954, 231.7515))
+control_comp_carbon_se <- c(41.86587, 42.02562, 53.14283, 58.53647, 64.32456, 
+                            21.60734, 23.33894, 25.39078, 31.97326, 34.01712,
+                            31.42645, 34.83117, 36.56502, 47.32931, 49.64546)
+
+control_plot <- ggplot(data = control_comp_carbon, aes(x = year, y = avgs, group = Compartment)) + 
+    geom_line(size=1, aes(color=Compartment)) + 
+    scale_colour_manual(values=c("Compartment 40" = "chartreuse4", "Compartment 240" = "goldenrod1", "Compartment 590" = "deeppink3")) +
+    geom_point() +
+    theme_classic() +
+    geom_errorbar(aes(ymin=avgs-control_comp_carbon_se, ymax=avgs+control_comp_carbon_se, color=Compartment), width=.2, 
+                    position = position_dodge(0.3)) +
+    labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+    ggtitle("Observed Tree Carbon Stocks - Control Treatment")
+control_plot
+```
+
+```{r}
+########### MECH ###############
+#Reduce treelist to mech only
+mech <- filter(carbon, treatment == "mech")
+head(mech)
+```
+
+```{r}
+#Reduce to years
+mech2001 <- filter(mech, timestep == "pre_treatment")
+mech2003 <- filter(mech, timestep == "post_1")
+mech2009 <- filter(mech, timestep == "post_7")
+mech2010 <- filter(mech, timestep == "post_2nd_burn")
+mech2016 <- filter(mech, timestep == "post_14")
+mech2018 <- filter(mech, timestep == "post_3rd_burn")
+mech2019a <- filter(mech, timestep == "post_harvest_2")
+mech2019b <- filter(mech, timestep == "post_mastication_2")
+mech2020 <- filter(mech, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+mech_sum2001 <- mech2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2003 <- mech2003 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2009 <- mech2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2016 <- mech2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2019a <- mech2019a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2019b <- mech2019b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mech_sum2020 <- mech2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+
+mech_sum <- rbind(mech_sum2001, mech_sum2003, mech_sum2009, mech_sum2016, mech_sum2019a, mech_sum2019b, mech_sum2020)
+head(mech_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp190 <- filter(mech_sum, compartment == 190)
+comp350 <- filter(mech_sum, compartment == 350)
+comp490 <- filter(mech_sum, compartment == 490)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon190 <- comp190 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment="190", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp190)))
+carbon190
+
+carbon350 <- comp350 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment="350", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp350)))
+carbon350
+
+carbon490 <- comp490 %>% group_by(year) %>%
+  summarise(treatment="mech", compartment="490", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp490)))
+carbon490
+```
+
+```{r}
+mech_comp_carbon <- data.frame(Compartment=rep(c("Compartment 190", "Compartment 350", "Compartment 490"), each=6),
+                        year=rep(c("2001", "2003", "2009", "2016", "2019", "2020"),3),
+                        avgs=c(145.6894, 131.2402, 160.1339, 184.7015, 178.0141, 173.1885, 
+                               163.3458, 125.5036, 151.6133, 179.9615, 179.4247, 165.7963, 
+                               184.0945, 165.9742, 189.7607, 237.0770, 213.4386, 175.3862))
+
+control_comp_carbon_se <- c(24.41695, 23.41468, 27.06222, 31.81777, 30.64969, 34.60570, 
+                            21.85001, 24.78652, 28.05763, 30.97764, 31.00767, 36.04352, 
+                            36.82514, 37.95366, 39.39351, 51.38560, 48.08031, 40.63612)
+
+mech_plot <- ggplot(data = mech_comp_carbon, aes(x = year, y = avgs, group = Compartment)) + 
+   geom_line(size=1, aes(color=Compartment)) + 
+   scale_colour_manual(values=c("Compartment 190" = "chartreuse4", "Compartment 350" = "goldenrod1", "Compartment 490" = "deeppink3")) +
+   geom_point() +
+   theme_classic() +
+   geom_errorbar(aes(ymin=avgs-control_comp_carbon_se, ymax=avgs+control_comp_carbon_se, color=Compartment), width=.2, 
+                    position = position_dodge(0.3)) +
+   geom_vline(xintercept = "2002", "2017") +
+   labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+   ggtitle("Observed Tree Carbon Stocks - Mechanical Treatment")
+mech_plot
+```
+
+```{r}
+########### BURN ###############
+#Reduce treelist to burn only
+burn <- filter(carbon, treatment == "burn")
+head(burn)
+```
+
+```{r}
+#Reduce to years
+burn2001 <- filter(burn, timestep == "pre_treatment")
+burn2003 <- filter(burn, timestep == "post_1")
+burn2009 <- filter(burn, timestep == "post_7")
+burn2010 <- filter(burn, timestep == "post_2nd_burn")
+burn2016 <- filter(burn, timestep == "post_14")
+burn2018 <- filter(burn, timestep == "post_3rd_burn")
+burn2019a <- filter(burn, timestep == "post_harvest_2")
+burn2019b <- filter(burn, timestep == "post_mastication_2")
+burn2020 <- filter(burn, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+burn_sum2001 <- burn2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2003 <- burn2003 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2009 <- burn2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2010 <- burn2010 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2016 <- burn2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2018 <- burn2018 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2019a <- burn2019a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2019b <- burn2019b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+burn_sum2020 <- burn2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+
+burn_sum <- rbind(burn_sum2001, burn_sum2003, burn_sum2009, burn_sum2010, burn_sum2016, burn_sum2018, burn_sum2019a, burn_sum2019b,
+                  burn_sum2020)
+head(burn_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp60 <- filter(burn_sum, compartment == 60)
+comp340 <- filter(burn_sum, compartment == 340)
+comp400 <- filter(burn_sum, compartment == 400)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon60 <- comp60 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment="60", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon), se=sd/sqrt(length(comp60)))
+carbon60
+
+carbon340 <- comp340 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment="340", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp340)))
+carbon340
+
+carbon400 <- comp400 %>% group_by(year) %>%
+  summarise(treatment="burn", compartment="400", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp400)))
+carbon400
+```
+
+```{r}
+burn_comp_carbon <- data.frame(Compartment=rep(c("Compartment 60", "Compartment 340", "Compartment 400"), each=7),
+                        year=rep(c("2001", "2003", "2009", "2010", "2016", "2018", "2020"),3),
+                        avgs=c(128.4694, 117.2578, 129.2464, 126.2694, 144.9825, 143.2590, 154.9316,
+                               161.3791, 161.3791, 166.4952, 149.9593, 185.4314, 172.6186, 186.3477,
+                               144.3803, 140.7353, 157.4776, 155.3060, 181.8452, 177.6995, 
+                               193.1314))
+
+burn_comp_carbon_se <- c(33.19194, 25.36877, 25.00126, 24.08063, 29.09729, 28.81463, 31.93977,
+                            41.18006, 40.26898, 41.05200, 38.29353, 45.67781, 38.87171, 42.70891,
+                            24.15424, 23.50897, 27.79596, 28.07644, 34.92477, 36.29566, 38.56395)
+
+burn_plot <- ggplot(data = burn_comp_carbon, aes(x = year, y = avgs, group = Compartment)) + 
+   geom_line(size=1, aes(color=Compartment)) + 
+   scale_colour_manual(values=c("Compartment 60" = "chartreuse4", "Compartment 340" = "goldenrod1", "Compartment 400" = "deeppink3")) +
+   geom_point() +
+   theme_classic() +
+   geom_errorbar(aes(ymin=avgs-burn_comp_carbon_se, ymax=avgs+burn_comp_carbon_se, color=Compartment), width=.2, 
+                    position = position_dodge(0.3)) +
+   labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+   ggtitle("Observed Tree Carbon Stocks - Burn Treatment")
+burn_plot
+```
+
+```{r}
+########### MECHBURN ###############
+#Reduce treelist to mechburn only
+mechburn <- filter(carbon, treatment == "mechburn")
+head(mechburn)
+```
+
+```{r}
+#Reduce to years
+mechburn2001 <- filter(mechburn, timestep == "pre_treatment")
+mechburn2003 <- filter(mechburn, timestep == "post_1")
+mechburn2009 <- filter(mechburn, timestep == "post_7")
+mechburn2010 <- filter(mechburn, timestep == "post_2nd_burn")
+mechburn2016 <- filter(mechburn, timestep == "post_14")
+mechburn2018 <- filter(mechburn, timestep == "post_3rd_burn")
+mechburn2019a <- filter(mechburn, timestep == "post_harvest_2")
+mechburn2019b <- filter(mechburn, timestep == "post_mastication_2")
+mechburn2020 <- filter(mechburn, timestep == "post_18")
+```
+
+```{r}
+#Group by plot, sum plot carbon
+mechburn_sum2001 <- mechburn2001 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2003 <- mechburn2003 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2009 <- mechburn2009 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2010 <- mechburn2010 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2016 <- mechburn2016 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2018 <- mechburn2018 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2019a <- mechburn2019a %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2019b <- mechburn2019b %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+mechburn_sum2020 <- mechburn2020 %>% group_by(plot, year, compartment, treatment) %>%
+  summarise(sum_plot_carbon=sum(carbon))
+
+mechburn_sum <- rbind(mechburn_sum2001, mechburn_sum2003, mechburn_sum2009, mechburn_sum2010, mechburn_sum2016, mechburn_sum2018,
+                      mechburn_sum2019a, mechburn_sum2019b, mechburn_sum2020)
+head(mechburn_sum)
+```
+
+```{r}
+#Making 3 dataframes for compartments
+comp180 <- filter(mechburn_sum, compartment == 180)
+comp380 <- filter(mechburn_sum, compartment == 380)
+comp570 <- filter(mechburn_sum, compartment == 570)
+```
+
+```{r}
+#Group by year, average compartment carbon
+carbon180 <- comp180 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment="180", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp180)))
+carbon180
+
+carbon380 <- comp380 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment="380", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp380)))
+carbon380
+
+carbon570 <- comp570 %>% group_by(year) %>%
+  summarise(treatment="mechburn", compartment="570", avg_yr_carbon=mean(sum_plot_carbon), sd=sd(sum_plot_carbon),
+            se=sd/sqrt(length(comp570)))
+carbon570
+```
+
+```{r}
+mechburn_comp_carbon <- data.frame(Compartment=rep(c("Compartment 180", "Compartment 380", "Compartment 570"), each=6),
+                        year=rep(c("2001", "2003", "2009", "2016", "2019", "2020"),3),
+                        avgs=c(184.4070, 145.7142, 162.4862, 178.8038, 160.3511, 150.5148, 
+                               215.8870, 170.7620, 184.8546, 209.0796, 170.6253, 153.1345,
+                               150.5715, 112.8688, 117.8721, 132.8167, 130.9776, 138.6261))
+
+mechburn_comp_carbon_se <- c(46.24973, 43.65885, 45.86877, 46.89176, 48.57472, 50.78749, 
+                             31.17420, 34.55889, 33.69795, 36.62389, 40.82180, 33.12054,
+                             27.94849, 26.36254, 21.73492, 25.22538, 24.79164, 25.52763)
+
+mechburn_plot <- ggplot(data = mechburn_comp_carbon, aes(x = year, y = avgs, group = Compartment)) + 
+   geom_line(size=1, aes(color=Compartment)) + 
+   scale_colour_manual(values=c("Compartment 180" = "chartreuse4", "Compartment 380" = "goldenrod1", "Compartment 570" = "deeppink3")) +
+   geom_point() +
+   theme_classic() +
+   geom_errorbar(aes(ymin=avgs-mechburn_comp_carbon_se, ymax=avgs+mechburn_comp_carbon_se, color=Compartment), width=.2, 
+                    position = position_dodge(0.3)) +
+   labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+   ggtitle("Observed Carbon Stocks - Mechanical + Burn Treatment")
+mechburn_plot
+```
+
+```{r}
+##### ALL TREATMENTS - TREES ONLY #####
+
+#For each treatment, group by year, average carbon
+control_comp_avg <- rbind(carbon40, carbon240, carbon590)
+control_avg <- control_comp_avg %>% group_by(year) %>% 
+  summarise(year=year, treatment="control", avg_carbon=mean(avg_yr_carbon), sd=sd(avg_yr_carbon), se=sd/sqrt(length(control_comp_avg)))
+control_avg
+
+mech_comp_avg <- rbind(carbon190, carbon350, carbon490)
+mech_avg <- mech_comp_avg %>% group_by(year) %>%
+  summarise(year=year, treatment="mech", avg_carbon=mean(avg_yr_carbon), sd=sd(avg_yr_carbon), se=sd/sqrt(length(mech_comp_avg)))
+mech_avg
+
+burn_comp_avg <- rbind(carbon60, carbon340, carbon400)
+burn_avg <- burn_comp_avg %>% group_by(year) %>%
+  summarise(year=year, treatment="burn", avg_carbon=mean(avg_yr_carbon), sd=sd(avg_yr_carbon), se=sd/sqrt(length(burn_comp_avg)))
+burn_avg
+
+mechburn_comp_avg <- rbind(carbon180, carbon380, carbon570)
+mechburn_avg <- mechburn_comp_avg %>% group_by(year) %>%
+  summarise(year=year, treatment="mechburn", avg_carbon=mean(avg_yr_carbon), sd=sd(avg_yr_carbon),
+            se=sd/sqrt(length(mechburn_comp_avg)))
+mechburn_avg
+```
+
+```{r}
+alltreatmentree_carbon <- data.frame(Treatment=c("Control", "Control", "Control", "Control", "Control",
+                                              "Mechanical", "Mechanical", "Mechanical",
+                                              "Mechanical", "Mechanical", "Mechanical", 
+                                              "Burn", "Burn", "Burn", "Burn", 
+                                              "Burn", "Burn", "Burn", "Mechanical + Burn", 
+                                              "Mechanical + Burn", "Mechanical + Burn", 
+                                              "Mechanical + Burn", "Mechanical + Burn", "Mechanical 
+                                              + Burn"), 
+                        year=c("2001", "2003", "2009", "2016", "2020",
+                               "2001", "2003", "2009", "2016", "2019", "2020",
+                               "2001", "2003", "2009", "2010", "2016", "2018", "2020",
+                               "2001", "2003", "2009", "2016", "2019", "2020"),
+                        avgs=c(161.9140, 167.3432, 186.5995, 227.3635, 237.5869,
+                               164.3766, 140.9060, 167.1693, 200.5800, 190.2924, 171.4570,
+                               144.7429, 138.4148, 151.0731, 143.8449, 170.7530, 164.5257, 178.1369,
+                               183.6218, 143.1150, 155.0709, 173.5667, 153.9847, 147.4251))
+
+alltreatment_carbon_se <- c(14.38457, 13.71032, 12.66232, 13.53918, 12.93140,
+                            7.847869, 8.939965, 8.174440, 12.939857, 8.188458, 2.051015,
+                            6.718881, 8.204759, 7.933388, 6.309003, 9.140620, 7.590096, 8.320342,
+                            13.335366, 11.853069, 13.921829, 15.676825, 8.400224, 3.156545)
+
+alltreatmenttree_plot <- ggplot(data = alltreatment_carbon, aes(x = year, y = avgs, group = Treatment)) + 
+   geom_line(size=1, aes(color=Treatment)) + 
+   scale_colour_manual(values=c("Control" = "chartreuse4", "Mechanical" = "goldenrod1", "Burn" = "red", "Mechanical + Burn" = "blue")) +
+   geom_point() +
+   theme_classic() +
+   geom_errorbar(aes(ymin=avgs-alltreatment_carbon_se, ymax=avgs+alltreatment_carbon_se, color=Treatment), width=.2, 
+                    position = position_dodge(0.3)) +
+   labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+   ggtitle("Observed Carbon Stocks (Trees Only) - All Treatments")
+alltreatmenttree_plot
+```
+```{r}
+##### ALL TREATMENTS - TREES, UNDERSTORY, AND FUELS #######
+alltreatment_carbon <- data.frame(Treatment=c("Control", "Control", "Control", "Control", "Control",
+                                              "Mechanical", "Mechanical", "Mechanical",
+                                              "Mechanical", "Mechanical", "Mechanical", 
+                                              "Burn", "Burn", "Burn", "Burn", 
+                                              "Burn", "Burn", "Burn", "Mechanical + Burn", 
+                                              "Mechanical + Burn", "Mechanical + Burn", 
+                                              "Mechanical + Burn", "Mechanical + Burn", "Mechanical 
+                                              + Burn"), 
+                        year=c("2001", "2003", "2009", "2016", "2020",
+                               "2001", "2003", "2009", "2016", "2019", "2020",
+                               "2001", "2003", "2009", "2010", "2016", "2018", "2020",
+                               "2001", "2003", "2009", "2016", "2019", "2020"),
+                        avgs=c(206.30269, 211.41011, 232.361, 284.91448, 296.68202,
+                               211.3527335, 180.0337555, 206.95907, 240.74337, 230.32211, 220.88579,
+                               191.666124, 147.660411, 170.019223, 158.433092, 201.119884, 182.611251, 204.8868875,
+                               234.07683, 167.58285, 174.40417, 208.79865, 175.44271, 167.11801))
+
+alltreatment_carbon_se <- c(14.38457, 13.71032, 12.66232, 13.53918, 12.93140,
+                            7.847869, 8.939965, 8.174440, 12.939857, 8.188458, 2.051015,
+                            6.718881, 8.204759, 7.933388, 6.309003, 9.140620, 7.590096, 8.320342,
+                            13.335366, 11.853069, 13.921829, 15.676825, 8.400224, 3.156545)
+
+alltreatment_plot <- ggplot(data = alltreatment_carbon, aes(x = year, y = avgs, group = Treatment)) + 
+   geom_line(size=1, aes(color=Treatment)) + 
+   scale_colour_manual(values=c("Control" = "chartreuse4", "Mechanical" = "goldenrod1", "Burn" = "red", "Mechanical + Burn" = "blue")) +
+   geom_point() +
+   theme_classic() +
+   geom_errorbar(aes(ymin=avgs-alltreatment_carbon_se, ymax=avgs+alltreatment_carbon_se, color=Treatment), width=.2, 
+                    position = position_dodge(0.3)) +
+   labs(x ="Year", y = "Average Carbon Stock (MgC/ha)") + 
+   ggtitle("Observed Carbon Stocks (Trees, Understory, and Fuels) - All Treatments")
+alltreatment_plot
+```
+
